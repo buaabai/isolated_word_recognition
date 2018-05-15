@@ -9,6 +9,9 @@ import scipy.io.wavfile as sio_wav
 import librosa
 import numpy as np
 import matplotlib.pyplot as plt
+import os
+import random
+import shutil
 
 def PlotWaveform(audiofile):
     _,audiodata = sio_wav.read(audiofile)
@@ -48,10 +51,67 @@ def PreEmphasis(audiofile):
 def MFCC(audiodata,sr,n_mfcc,n_fft,hop_length):
     audiodata = audiodata.astype('float32')
     return librosa.feature.mfcc(audiodata,sr,n_mfcc=n_mfcc,n_fft=n_fft,hop_length=hop_length)
+
+def MfccOnDataset(datasetdir,mfccdatasetdir,n_mfcc,n_fft,hop_length):
+    subdatasetlist = os.listdir(datasetdir)
+    if not os.path.isdir(mfccdatasetdir):
+        os.mkdir(mfccdatasetdir)
+    for name in subdatasetlist:
+        mfccsubdatadir = os.path.join(mfccdatasetdir,name)
+        if not os.path.isdir(mfccsubdatadir):
+            os.mkdir(mfccsubdatadir)
+        subdatadir = os.path.join(datasetdir,name)
+        audiofile = os.listdir(subdatadir)
+        for file in audiofile:
+            sr,audiodata = PreEmphasis(os.path.join(subdatadir,file))
+            audio_mfcc = MFCC(audiodata,sr,n_mfcc,n_fft,hop_length)
+            np.savetxt(os.path.join(mfccdatasetdir,name,file[:-4]+'.txt'),audio_mfcc)
+    print('Extract MFCC features Done!')
     
+def SmallMfccDataset(mfccdatasetdir,smallmfccdatasetdir,n_train,n_test):
+    submfcclist = os.listdir(mfccdatasetdir)
+    if not os.path.isdir(smallmfccdatasetdir):
+        os.mkdir(smallmfccdatasetdir)
+        
+    train = os.path.join(smallmfccdatasetdir,'train')
+    if not os.path.isdir(train):
+        os.mkdir(train)
+            
+    test = os.path.join(smallmfccdatasetdir,'test')
+    if not os.path.isdir(test):
+        os.mkdir(test)
+            
+    for name in submfcclist:
+        submfccdir = os.path.join(mfccdatasetdir,name)
+        mfccdatafile = os.listdir(submfccdir)
+        random.shuffle(mfccdatafile)
+        
+        train_sub = os.path.join(train,name)
+        test_sub = os.path.join(test,name)
+        if not os.path.isdir(train_sub):
+            os.mkdir(train_sub)
+        if not os.path.isdir(test_sub):
+            os.mkdir(test_sub)
+        
+        for file in mfccdatafile[:n_train]:
+            oldfile = os.path.join(submfccdir,file)
+            newfile = os.path.join(train_sub,file)
+            shutil.copyfile(oldfile,newfile)
+        
+        
+        for file in mfccdatafile[n_train:n_train + n_test]:
+            oldfile = os.path.join(submfccdir,file)
+            newfile = os.path.join(test_sub,file)
+            shutil.copyfile(oldfile,newfile)
+    print('Extract dataset Done!')
+            
+            
 
 if __name__ == '__main__':
-    audiofile = 'test.wav'
-    sr,audiodata = PreEmphasis(audiofile)
-    mfcc = MFCC(audiodata,sr,20,400,240)
+    datasetdir = 'C:\\Users\\spinbjy\\Desktop\\test\\dataset'
+    mfccdatasetdir = 'C:\\Users\\spinbjy\\Desktop\\test\\mfccdataset'
+    n_mfcc = 20
+    n_fft = 400 #sample rate = 16000, a frame is 25ms long, and overlap 10ms
+    hop_length = 240 #hop length is 15ms
+    
     
