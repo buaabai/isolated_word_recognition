@@ -50,9 +50,12 @@ def PreEmphasis(audiofile):
 
 def MFCC(audiodata,sr,n_mfcc,n_fft,hop_length):
     audiodata = audiodata.astype('float32')
-    return librosa.feature.mfcc(audiodata,sr,n_mfcc=n_mfcc,n_fft=n_fft,hop_length=hop_length)
+    stft = librosa.core.stft(audiodata,n_fft=n_fft,hop_length=hop_length,center=False)
+    return librosa.feature.mfcc(audiodata,sr,n_mfcc=n_mfcc,S=stft,n_fft=n_fft,hop_length=hop_length)
+    #return librosa.feature.mfcc(audiodata,sr,n_mfcc=n_mfcc,n_fft=n_fft,hop_length=hop_length)
 
 def MfccOnDataset(datasetdir,mfccdatasetdir,n_mfcc,n_fft,hop_length):
+    print('Extracting MFCC feature......')
     subdatasetlist = os.listdir(datasetdir)
     if not os.path.isdir(mfccdatasetdir):
         os.mkdir(mfccdatasetdir)
@@ -67,8 +70,21 @@ def MfccOnDataset(datasetdir,mfccdatasetdir,n_mfcc,n_fft,hop_length):
             audio_mfcc = MFCC(audiodata,sr,n_mfcc,n_fft,hop_length)
             np.savetxt(os.path.join(mfccdatasetdir,name,file[:-4]+'.txt'),audio_mfcc)
     print('Extract MFCC features Done!')
+
+def PreprocessOnMfccdataet(mfccdatasetdir,data_shape):
+    print('Removing bad data whose shape is not equal to {}'.format(data_shape)+'......')
+    sublist = os.listdir(mfccdatasetdir)
+    for name in sublist:
+        mfccsubdatadir = os.path.join(mfccdatasetdir,name)
+        mfccfile = os.listdir(mfccsubdatadir)
+        for file in mfccfile:
+            filename = os.path.join(mfccsubdatadir,file)
+            if np.loadtxt(filename).shape != data_shape:
+                os.remove(filename)
+    print('Remove bad data Done!')
     
 def SmallMfccDataset(mfccdatasetdir,smallmfccdatasetdir,n_train,n_test):
+    print('Start making a smaller mfcc dataset......')
     submfcclist = os.listdir(mfccdatasetdir)
     if not os.path.isdir(smallmfccdatasetdir):
         os.mkdir(smallmfccdatasetdir)
@@ -106,12 +122,13 @@ def SmallMfccDataset(mfccdatasetdir,smallmfccdatasetdir,n_train,n_test):
     print('Extract dataset Done!')
             
             
-
 if __name__ == '__main__':
     datasetdir = 'C:\\Users\\spinbjy\\Desktop\\test\\dataset'
-    mfccdatasetdir = 'C:\\Users\\spinbjy\\Desktop\\test\\mfccdataset'
-    n_mfcc = 20
-    n_fft = 400 #sample rate = 16000, a frame is 25ms long, and overlap 10ms
-    hop_length = 240 #hop length is 15ms
-    
+    mfccdatadir = 'C:\\Users\\spinbjy\\Desktop\\test\\mfccdataset'
+    smallmfccdir = 'C:\\Users\\spinbjy\\Desktop\\test\\smallmfcc'
+    #MfccOnDataset(datasetdir,mfccdatadir,40,400,240)
+    PreprocessOnMfccdataet(mfccdatadir,data_shape=(40,66))
+    SmallMfccDataset(mfccdatadir,smallmfccdir,1800,200)
+
+
     
